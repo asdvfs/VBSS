@@ -1,0 +1,263 @@
+http://repo.spring.io/libs-release-local/org/springframework/hateoas/spring-hateoas/
+
+
+适合于使用二级缓存的情况：
+1、数据不会被第三方修改；
+ 
+一般情况下，会被hibernate以外修改的数据最好不要配置二级缓存，以免引起不一致的数据。但是如果此数据因为性能的原因需要被缓存，同时又有可能被第3方比如SQL修改，也可以为其配置二级缓存。只是此时需要在sql执行修改后手动调用cache的清除方法。以保证数据的一致性
+ 
+  2、数据大小在可接收范围之内；
+ 
+     如果数据表数据量特别巨大，此时不适合于二级缓存。原因是缓存的数据量过大可能会引起内存资源紧张，反而降低性能。
+ 
+如果数据表数据量特别巨大，但是经常使用的往往只是较新的那部分数据。此时，也可为其配置二级缓存。但是必须单独配置其持久化类的缓存策略，比如最大缓存数、缓存过期时间等，将这些参数降低至一个合理的范围（太高会引起内存资源紧张，太低了缓存的意义不大）。
+ 
+  3、数据更新频率低；
+ 
+     对于数据更新频率过高的数据，频繁同步缓存中数据的代价可能和 查询缓存中的数据从中获得的好处相当，坏处益处相抵消。此时缓存的意义也不大。
+ 
+ 
+  4、非关键数据（不是财务数据等）
+ 
+  财务数据等是非常重要的数据，绝对不允许出现或使用无效的数据，所以此时为了安全起见最好不要使用二级缓存。
+  因为此时 “正确性”的重要性远远大于 “高性能”的重要性。
+  
+  
+  
+  
+  --------------------------------------------------------------------------------------------
+  
+  
+  
+  
+  
+  
+session.update(Object arg0);
+session.update(String arg0, Object arg1);
+//
+session.delete(Object arg0);
+session.delete(String arg0, Objectarg1);
+//
+=========================================================
+..
+Hibernate的session接口中，delete和update分别有两个重载方法，不同的是参数多了一个String ；
+        一般情况下，更新和删除只要传一个Object对象就可以了，那另一个方法中的String是干什么用的呢？
+        
+1.  String arg0表示的是个EntityName的含义---就是我们说的表名的映射Class名称；
+2.   一般情况下，我们根据Object这个PoJo就可以知道这个对象对应的Class名称，同时就可以知道该Class在数据库的表名，所有，没有必要添加EntityName属性；
+比如：Customer cus=new Customer();
+我们根据cus这个Object就知道了它是Customer这个类，就知道它的表名是T_CUSTOMER了，hibernate就可以生成对应的SQL语句啦！
+3. 在不使用PoJo类和O/R Mapping的情况下，EntityName是必填的,因为没有了ORM关系，根据Object无法找到它对应的Class名称，更不用说数据库表名称了。
+        这时候有人就问，什么情况下不使用PoJo和O/R Mapping呢？
+        好像现在hibernate真没有不采用此方法的-------但是，不采用PoJo和O/R Mapping，而采用动态模型(Dynamic models)和 XML映射将是hibernate未来的研究方向，因此，这个参数被提前保留了。
+像get load save saveOrUpdate merge persist等等都提供了带entityName参数的方法啦。
+..
+//============================
+..
+总结：EntityName这个参数暂时可以不用，它是预留的！
+
+
+
+锁的描述：
+
+悲观锁（ Pessimistic Locking ）
+悲观锁，正如其名，他是对数据库而言的，数据库悲观了，他感觉每一个对他操作的程序都有可能产生并发。它指的是对数据被外界（包括本系统当前的其他事务，以及来自外部系统的事务处理）修改持保守态度，因此，在整个数据处理过程中，将数据处于锁定状态。悲观锁的实现，往往依靠数据库提供的锁机制（也只有数据库层提供的锁机制才能真正保证数据访问的排他性，否则，即使在本系统中实现了加锁机制，也无法保证外部系统不会修改数据）。
+一个典型的倚赖数据库的悲观锁调用：
+
+Hibernate 的加锁模式有：
+LockMode.NONE ：无锁机制。
+LockMode.WRITE ：Hibernate 在 Insert 和 Update 记录的时候会自动获取。
+LockMode.READ ：Hibernate 在读取记录的时候会自动获取。
+
+以上这三种锁机制一般由 Hibernate 内部使用，如Hibernate 为了保证 Update过程中对象不会被外界修改，会在 save 方法实现中自动为目标对象加上 WRITE 锁。
+LockMode.UPGRADE ：利用数据库的 for update 子句加锁。
+LockMode. UPGRADE_NOWAIT ： Oracle 的特定实现，利用 Oracle 的 for update nowait 子句实现加锁。
+上面这两种锁机制是我们在应用层较为常用的，加锁一般通过以下方法实现：
+Criteria.setLockMode
+Query.setLockMode
+Session.lock
+
+注意，只有在查询开始之前（也就是 Hiberate 生成 SQL 之前）设定加锁，才会真正通过数据库的锁机制进行加锁处理，否则，数据已经通过不包含 for update 子句的 Select SQL 加载进来，所谓数据库加锁也就无从谈起。
+
+在Hibernate使用悲观锁十分容易，但实际应用中悲观锁是很少被使用的，因为它大大限制了并发性，并且利用数据库底层来维护锁，这样大大降低了应用程序的效率。
+下面我们来看一下hibernateAPI中提供的两个get方法：
+Get（Classclazz，Serializable id，LockMode lockMode）
+Get（Classclazz，Serializable id，LockOptions lockOptions  ）
+
+
+乐观锁（Optimistic Locking）
+       相对悲观锁而言，乐观锁机制采取了更加宽松的加锁机制。悲观锁大多数情况下依靠数据库的锁机制实现，以保证操作最大程度的独占性。但随之而来的就是数据库性能的大量开销，特别是对长事务而言，这样的开销往往无法承受。乐观锁机制在一定程度上解决了这个问题。乐观锁，大多是基于数据版本（Version）记录机制实现。何谓数据版本？即为数据增加一个版本标识，在基于数据库表的版本解决方案中，一般是通过为数据库表增加一个"version"字段来实现。
+　　乐观锁的工作原理：读取出数据时，将此版本号一同读出，之后更新时，对此版本号加一。此时，将提交数据的版本数据与数据库表对应记录的当前版本信息进行比对，如果提交的数据版本号大于数据库表当前版本号，则予以更新，否则认为是过期数据。
+Hibernate为乐观锁提供了3中实现：
+1. 基于version
+2. 基于timestamp
+3. 为遗留项目添加添加乐观锁
+  
+  
+  
+
+配置基于version的乐观锁：
+[html] view plaincopyprint?
+<?xml version="1.0" encoding="utf-8"?>  
+<!DOCTYPE hibernate-mapping PUBLIC"-//Hibernate/Hibernate Mapping DTD 3.0//EN""http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">  
+  
+<hibernate-mapping>  
+    <classnameclassname="com.bzu.hibernate.pojos.People"table="people">  
+        <idnameidname="id"type="string">  
+            <columnnamecolumnname="id"></column>  
+            <generatorclassgeneratorclass="uuid"></generator>  
+        </id>  
+        
+        <!--version标签用于指定表示版本号的字段信息-->  
+        <versionnameversionname="version"column="version"type="integer"></version>  
+  
+        <propertynamepropertyname="name"column="name"type="string"></property>  
+        
+    </class>  
+</hibernate-mapping>  
+ 
+注：不要忘记在实体类添加属性version
+ 
+配置基于timestamp的乐观锁：
+[html] view plaincopyprint?
+<?xml version="1.0" encoding="utf-8"?>  
+<!DOCTYPE hibernate-mapping PUBLIC"-//Hibernate/Hibernate Mapping DTD 3.0//EN""http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">  
+  
+<hibernate-mapping>  
+    <classnameclassname="com.suxiaolei.hibernate.pojos.People"table="people">  
+        <id name="id"type="string">  
+            <column name="id"></column>  
+            <generator class="uuid"></generator>  
+        </id>  
+        
+        <!--timestamp标签用于指定表示版本号的字段信息-->  
+        <timestamp name="updateDate"column="updateDate"></timestamp>  
+  
+        <propertynamepropertyname="name"column="name"type="string"></property>  
+  
+  
+    </class>  
+</hibernate-mapping>    
+
+
+
+
+HATEOAS:
+spring-plugin-core-1.1.0.RELEASE.jar
+jackson-annotations-2.4.0.jar
+Jackson 是一个 Java 用来处理 JSON 格式数据的类库,性能非常好。
+
+
+I'm struggling with the correct way to implement Spring MVC 3.x RESTful services with HATEOAS. Consider the following constraints:
+
+I don't want my domain entities polluted with web/rest constructs.
+I don't want my controllers polluted with view constructs.
+I want to support multiple views.
+
+
+spring-web-4.0.5.RELEASE.jar: spring 将一个对象转成Json放在ResponseBody中
+
+
+
+
+
+
+
+
+
+
+
+**WebApplicationContext
+Spring会创建一个WebApplicationContext上下文，称为父上下文（父容器） ，保存在 ServletContext中，key是WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE的值。
+可以使用Spring提供的工具类取出上下文对象：WebApplicationContextUtils.getWebApplicationContext(ServletContext);
+ 
+DispatcherServlet是一个Servlet,可以同时配置多个，每个 DispatcherServlet有一个自己的上下文对象（WebApplicationContext），称为子上下文（子容器），子上下文可以访问父上下文中的内容，但父上下文不能访问子上下文中的内容。 它也保存在 ServletContext中，key是"org.springframework.web.servlet.FrameworkServlet.CONTEXT"+Servlet名称。当一个Request对象产生时，会把这个子上下文对象（WebApplicationContext）保存在Request对象中，key是DispatcherServlet.class.getName() + ".CONTEXT"。
+可以使用工具类取出上下文对象：RequestContextUtils.getWebApplicationContext(request);
+ 
+ 
+说明 ：Spring 并没有限制我们，必须使用父子上下文。我们可以自己决定如何使用。
+
+
+
+
+如何访问到静态的文件，如jpg,js,css？
+ 
+ 
+如何你的DispatcherServlet拦截"*.do"这样的有后缀的URL，就不存在访问不到静态资源的问题。
+
+如果你的DispatcherServlet拦截"/"，为了实现REST风格，拦截了所有的请求，那么同时对*.js,*.jpg等静态文件的访问也就被拦截了。
+
+我们要解决这个问题。
+ 
+目的：可以正常访问静态文件，不可以找不到静态文件报404。
+ 
+方案一：激活Tomcat的defaultServlet来处理静态文件
+Xml代码  收藏代码
+<servlet-mapping>   
+    <servlet-name>default</servlet-name>  
+    <url-pattern>*.jpg</url-pattern>     
+</servlet-mapping>    
+<servlet-mapping>       
+    <servlet-name>default</servlet-name>    
+    <url-pattern>*.js</url-pattern>    
+</servlet-mapping>    
+<servlet-mapping>        
+    <servlet-name>default</servlet-name>       
+    <url-pattern>*.css</url-pattern>      
+</servlet-mapping>    
+要配置多个，每种文件配置一个   
+要写在DispatcherServlet的前面， 让 defaultServlet先拦截请求，这样请求就不会进入Spring了，我想性能是最好的吧。
+
+Tomcat, Jetty, JBoss, and GlassFish 自带的默认Servlet的名字 -- "default"
+Google App Engine 自带的 默认Servlet的名字 -- "_ah_default"
+Resin 自带的 默认Servlet的名字 -- "resin-file"
+WebLogic 自带的 默认Servlet的名字  -- "FileServlet"
+WebSphere  自带的 默认Servlet的名字 -- "SimpleFileServlet" 
+ 
+ 
+
+方案二： 在spring3.0.4以后版本提供了mvc:resources ，  使用方法：
+Xml代码  收藏代码
+<!-- 对静态资源文件的访问 -->    
+<mvc:resources mapping="/images/**" location="/images/" />  
+  
+/images/**映射到ResourceHttpRequestHandler进行处理，location指定静态资源的位置.可以是web application根目录下、jar包里面，这样可以把静态资源压缩到jar包中。cache-period 可以使得静态资源进行web cache 
+ 
+如果出现下面的错误，可能是没有配置<mvc:annotation-driven />的原因。 
+报错WARNING: No mapping found for HTTP request with URI [/mvc/user/findUser/lisi/770] in DispatcherServlet with name 'springMVC'
+ 
+使用<mvc:resources/>元素,把mapping的URI注册到SimpleUrlHandlerMapping的urlMap中,
+key为mapping的URI pattern值,而value为ResourceHttpRequestHandler,
+这样就巧妙的把对静态资源的访问由HandlerMapping转到ResourceHttpRequestHandler处理并返回,所以就支持classpath目录,jar包内静态资源的访问.
+另外需要注意的一点是,不要对SimpleUrlHandlerMapping设置defaultHandler.因为对static uri的defaultHandler就是ResourceHttpRequestHandler,
+否则无法处理static resources request.
+ 
+ 
+方案三 ，使用<mvc:default-servlet-handler/>
+Xml代码  收藏代码
+<mvc:default-servlet-handler/>  
+会把"/**" url,注册到SimpleUrlHandlerMapping的urlMap中,把对静态资源的访问由HandlerMapping转到org.springframework.web.servlet.resource.DefaultServletHttpRequestHandler处理并返回.
+DefaultServletHttpRequestHandler使用就是各个Servlet容器自己的默认Servlet.
+ 
+ 
+补充说明：多个HandlerMapping的执行顺序问题：
+DefaultAnnotationHandlerMapping的order属性值是：0
+
+<mvc:resources/ >自动注册的 SimpleUrlHandlerMapping的order属性值是： 2147483646
+ 
+<mvc:default-servlet-handler/>自动注册 的SimpleUrlHandlerMapping 的order属性值是： 2147483647
+ 
+ 
+spring会先执行order值比较小的。当访问一个a.jpg图片文件时，先通过 DefaultAnnotationHandlerMapping 来找处理器，一定是找不到的，因为我们没有叫a.jpg的Action。然后再按order值升序找，由于最后一个 SimpleUrlHandlerMapping 是匹配 "/**"的，所以一定会匹配上，就可以响应图片。
+
+ 
+访问一个图片，还要走层层匹配。不知性能如何？
+最后再说明一下，方案二、方案三 在访问静态资源时，如果有匹配的(近似)总拦截器，就会走拦截器。如果你在拦截中实现权限检查，要注意过滤这些对静态文件的请求。
+如何你的DispatcherServlet拦截 *.do这样的URL后缀，就不存上述问题了。还是有后缀方便。
+
+
+
+Spring为我们提供了：
+org.springframework.web.servlet.HandlerInterceptor接口，
+org.springframework.web.servlet.handler.HandlerInterceptorAdapter适配器，
+实现这个接口或继承此类，可以非常方便的实现自己的拦截器。

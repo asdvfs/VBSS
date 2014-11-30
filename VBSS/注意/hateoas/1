@@ -1,0 +1,29 @@
+Spring data rest creates controllers for you automatically for each Repository type. 
+They respect / navigation and translate it to . navigation. 
+The car controller has no idea a person controller or a person repository exists, it only knows about cars.
+ That url routes to the car controller, it loads the car, then navs to the owner...which unless eagerly fetched is not there
+ 
+ 
+ 
+ @Entity
+public class Car implements Serializable{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long carId;
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name="personId")
+    private Person owner;
+    private String color;
+    private String brand;
+}
+
+@Entity
+public class Person implements Serializable {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long personId;
+    private String firstName;
+    private String lastName;
+    @OneToMany(mappedBy="owner")
+    private List<Car> cars;
+}

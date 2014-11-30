@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-module
+  type="WEB"
+  name="VBSS"
+  id="myeclipse.1417105672906"
+  context-root="/VPSS"
+  j2ee-spec="1.4"
+  archive="VBSS.war">
+  <attributes>
+    <attribute name="webrootdir" value="WebRoot" />
+  </attributes>
+</project-module>
+

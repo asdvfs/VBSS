@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     
+     xmlns:context="http://www.springframework.org/schema/context"
+     xmlns:tx="http://www.springframework.org/schema/tx"
+     xmlns:aop="http://www.springframework.org/schema/aop"
+     xmlns:cache="http://www.springframework.org/schema/cache"
+     xmlns:mvc="http://www.springframework.org/schema/mvc"
+     xmlns:util="http://www.springframework.org/schema/util"
+     xmlns:tool="http://www.springframework.org/schema/tool"
+     
+     xsi:schemaLocation="
+        http://www.springframework.org/schema/beans     
+        http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-4.1.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop-4.1.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+        http://www.springframework.org/schema/cache
+        http://www.springframework.org/schema/cache/spring-cache-4.1.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc-4.1.xsd
+        http://www.springframework.org/schema/util
+        http://www.springframework.org/schema/util/spring-util-4.1.xsd
+        http://www.springframework.org/schema/tool
+        http://www.springframework.org/schema/tool/spring-tool-4.1.xsd
+        ">
+        
+    <!-- 启动自动扫描该包下所有的Bean(例如@Controller) -->
+    <context:component-scan base-package="com.ap.app.controller" />
+    
+    
+    <!-- 定义视图解析器 -->
+    <!--<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix">
+            <value>/WEB-INF/user/</value>
+        </property>
+        <property name="suffix">
+            <value>.jsp</value>
+        </property>
+    </bean>
+    -->
+    
+    <!-- 
+    
+    
+ 1、DefaultAnnotationHandlerMapping（spring3.1之前）或RequestMappingHandlerMapping（spring3.1）
+
+    替换之前的BeanNameUrlHandlerMapping。
+
+   注解式处理器映射会扫描spring容器中的bean，发现bean实现类上拥有
+
+ @Controller或@RequestMapping注解的bean，并将它们作为处理器。
+
+ 
+
+2、HandlerAdapter实现：使用AnnotationMethodHandlerAdapter（spring3.1之前）或RequestMappingHandlerAdapter（spring3.1）替换之前的SimpleControllerHandlerAdapter。
+
+注解式处理器适配器会通过反射调用相应的功能处理方法（方法上拥有@RequestMapping注解）
+    
+-->
+    
+    
+    <!--开启注解式处理器   start  -->
+    
+    <!-- HandlerMapping -->
+   <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping">
+   
+   <!--<property name="interceptors">       
+     <list>       
+         <bean class="com.mvc.MyInteceptor"></bean>      
+     </list>       
+ </property>       
+   -->
+   </bean>
+ 
+   <!-- HandlerAdapter -->
+    <!-- Json --> 
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
+       
+        <property name="customArgumentResolvers">
+         <list>
+           <ref bean="userArgumentResolver" />
+         </list>
+        </property>
+    
+        <property name="messageConverters">
+         
+            <util:list id="beanList">
+                <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+                    
+					<property name="supportedMediaTypes"> 
+					   <list> 
+					       <value>text/html;charset=UTF-8</value> 
+					       <value>text/json;charset=UTF-8</value>
+					       <value>application/json;charset=UTF-8</value>
+					   </list> 
+					</property>  
+                </bean>
+            </util:list>
+        </property>
+    </bean>
+     
+     <!-- 或者使用 
+      <mvc:annotation-driven ></mvc:annotation-driven>
+     
+      -->
+    
+    <!--开启注解式处理器   end  -->
+   
+   
+   
+   
+   <!-- ViewResolver 
+                   视图解析器的配置
+   
+   -->
+   <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+    <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+    <property name="prefix" value="/WEB-INF/page/jsp/"/>
+    <property name="suffix" value=".jsp"/>
+   </bean>
+   
+   
+   
+   <!-- 处理器 -->
+   <!--
+  <bean name="/hello" class="com.ap.app.controller.HelloWorldController"/>
+   -->
+   
+   
+    <!--对静态资源文件的访问  start  -->  
+    
+    <!-- 对静态资源文件的访问  方案一 （二选一）
+     
+               使用默认的Servlet来响应静态文件
+       <mvc:default-servlet-handler/>  
+     -->
+    
+    <!-- 对静态资源文件的访问  方案二 （二选一）
+           匹配URL  /images/**  的URL被当做静态资源，由Spring读出到内存中再响应http。
+    -->  
+    <mvc:resources mapping="/images/**" location="/images/" cache-period="31556926"/>  
+    <mvc:resources mapping="/js/**" location="/js/" cache-period="31556926"/>  
+    <mvc:resources mapping="/css/**" location="/css/" cache-period="31556926"/>  
+    <!--对静态资源文件的访问  end  -->  
+   
+
+</beans>

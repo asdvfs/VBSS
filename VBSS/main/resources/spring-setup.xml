@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     
+     xmlns:context="http://www.springframework.org/schema/context"
+     xmlns:tx="http://www.springframework.org/schema/tx"
+     xmlns:aop="http://www.springframework.org/schema/aop"
+     xmlns:cache="http://www.springframework.org/schema/cache"
+     xsi:schemaLocation="
+        http://www.springframework.org/schema/beans     
+        http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-4.1.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop-4.1.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+        http://www.springframework.org/schema/cache
+        http://www.springframework.org/schema/cache/spring-cache-4.1.xsd
+        ">
+        
+ 
+ <!-- 
+    Spring为我们提供了一种极为方便注册这些BeanPostProcessor的方式
+       隐式地向 Spring容器注册AutowiredAnnotationBeanPostProcessor、RequiredAnnotationBeanPostProcessor、
+       CommonAnnotationBeanPostProcessor以及PersistenceAnnotationBeanPostProcessor
+ 
+  -->
+ <context:annotation-config />
+ 
+ <!--
+  by default,
+  the Spring-provided @Component, @Repository, @Service, and @Controller stereotypes will 
+  be detected;
+  This tag implies the effects of the 'annotation-config' tag, activating 
+  @Required, @Autowired, @PostConstruct, @PreDestroy, @Resource, @PersistenceContext and 
+  @PersistenceUnit annotations in the component classes, which is usually desired for autodetected 
+  components (without external configuration).
+ 
+ 
+  -->
+  
+  
+ <context:component-scan base-package="com.ap.*.*">
+  
+  <context:exclude-filter type="annotation"
+      expression="org.springframework.stereotype.Controller" />
+        
+      
+ </context:component-scan>
+
+ 
+ <!-- 开启AOP监听 只对当前配置文件有效 -->
+  <aop:aspectj-autoproxy expose-proxy="true" />
+  
+  <!-- 开启注解事务 只对当前配置文件有效 -->
+  <tx:annotation-driven transaction-manager="transactionManager" />
+   
+   <!-- 配置事务异常封装 -->
+   <bean id="persistenceExceptionTranslationPostProcessor" 
+       class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />
+   
+   
+   <!--  声明式容器事务管理 ,transaction-manager指定事务管理器为transactionManager -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="add*" propagation="REQUIRED" />
+            <tx:method name="get*" propagation="REQUIRED" />
+            <tx:method name="*" read-only="true" />
+        </tx:attributes>
+    </tx:advice>
+    
+    <aop:config expose-proxy="true" >
+         <!-- 只对业务逻辑层实施事务  -->
+        <aop:pointcut id="txPointcut" expression="execution(* com.ap.app.service..*.*(..))" />
+         <!-- Advisor定义，切入点和通知分别为txPointcut、txAdvice  -->
+        <aop:advisor pointcut-ref="txPointcut" advice-ref="txAdvice" />
+        
+    </aop:config>     
+    
+    
+    <aop:config expose-proxy="true" >
+        <aop:aspect ref="entityInterceptor" id="testAspect" >
+           <aop:after method="test" pointcut="execution(* com.ap.app.service..*.*(..))"  />
+        </aop:aspect>
+    </aop:config>
+      
+       
+   <!-- 开启controller注解支持 -->
+   <!-- 注：如果base-package=com.ap.app 则注解事务不起作用 TODO 读源码 -->
+   <!--<context:component-scan base-package="com.ap.app">
+   
+    <context:include-filter type="annotation"
+      expression="org.springframework.stereotype.Controller" />
+      
+    <context:exclude-filter type="annotation"
+      expression="org.springframework.stereotype.Service" />
+  </context:component-scan>
+        
+        
+ -->
+
+
+
+</beans>
